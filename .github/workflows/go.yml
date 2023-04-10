@@ -36,6 +36,10 @@ jobs:
           release_name: Release ${{ github.ref }}
           draft: false
           prerelease: false
+      - name: List directory contents
+        run: ls -R
+      - name: Print the current dir
+        run: pwd
       - name: Upload Release Asset
         id: upload-release-asset
         uses: actions/upload-release-asset@v1
