@@ -20,7 +20,7 @@ jobs:
       with:
         go-version: 1.19
     - name: Build
-      run: GOOS=windows GOARCH=amd64 go build -ldflags="-w -s" -trimpath
+      run: GOOS=windows GOARCH=amd64 go build -ldflags="-w -s" -trimpath && tar czvf wsx.tar.gz wsw.exe 
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
@@ -38,7 +38,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./wsw.exe
+        asset_path: ./wsw.tar.gz
         asset_name: wsw-${{ github.ref }}.tar.gz
         asset_content_type: application/gzip
 
