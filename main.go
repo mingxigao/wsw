@@ -45,27 +45,21 @@ type program struct {
 }
 
 func (p *program) Start(s service.Service, args ...string) error {
+	p.setEnvs()
 	// Look for exec.
 	// Verify home directory.
-	for i, env := range p.Env {
-		kv := strings.SplitN(env, "=", 2)
-		if len(kv) == 2 {
-			if strings.TrimSpace(strings.ToLower(kv[0])) == "path" {
-				pathEnv := os.ExpandEnv(fmt.Sprintf("%s;$PATH", kv[1]))
-				os.Setenv("PATH", pathEnv)
-			}
-		} else {
-			p.Env[i] = ""
-		}
-	}
 	if p.Dir != "" {
 		fi, err := os.Stat(p.Dir)
-		if err == nil && fi.IsDir() {
+		if err != nil {
+			return err
+		} else if fi.IsDir() {
 			os.Chdir(p.Dir)
 		}
 	} else {
 		dir, _, err := getExecPath()
-		if err == nil {
+		if err != nil {
+			return err
+		} else {
 			os.Chdir(dir)
 		}
 	}
@@ -77,6 +71,20 @@ func (p *program) Start(s service.Service, args ...string) error {
 	p.cmd.Env = append(os.Environ(), p.Env...)
 	go p.run()
 	return nil
+}
+
+func (p *program) setEnvs() {
+	for _, env := range p.Env {
+		kv := strings.SplitN(env, "=", 2)
+		if len(kv) == 2 {
+			if strings.TrimSpace(strings.ToLower(kv[0])) == "path" {
+				pathEnv := os.ExpandEnv(fmt.Sprintf("%s;$PATH", kv[1]))
+				os.Setenv("PATH", pathEnv)
+			} else {
+				os.Setenv(kv[0], kv[1])
+			}
+		}
+	}
 }
 func (p *program) run() {
 	logger.Info("Starting ", p.DisplayName)
@@ -207,6 +215,11 @@ func createConfig(config *Config) {
 	}
 }
 
+func printUsage() {
+	fmt.Println("Usage:")
+	fmt.Println("wsw -a init/start/stop/restart/install/uninstall")
+}
+
 func main() {
 	svcAction := flag.String("a", "", "Control the system service.")
 	flag.Parse()
@@ -215,6 +228,9 @@ func main() {
 			initConfig()
 			return
 		}
+	} else {
+		printUsage()
+		return
 	}
 	config, err := getConfig()
 	if err != nil {
@@ -252,15 +268,23 @@ func main() {
 			}
 		}
 	}()
+	handleAction(s, *svcAction)
+}
 
-	if len(*svcAction) != 0 {
-		err := service.Control(s, *svcAction)
-		if err != nil {
-			log.Printf("Valid actions: %q\n", service.ControlAction)
-			log.Fatal(err)
+func handleAction(s service.Service, action string) {
+	if len(action) != 0 {
+		if action == "run" {
+			err := s.Run()
+			if err != nil {
+				log.Fatal(err)
+			}
+		} else {
+			err := service.Control(s, action)
+			if err != nil {
+				log.Printf("Valid actions: %q\n", service.ControlAction)
+				log.Fatal(err)
+			}
+			return
 		}
-		return
 	}
-	fmt.Println("Usage:")
-	fmt.Println("wsw -a init/start/stop/restart/install/uninstall")
 }
