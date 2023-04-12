@@ -228,9 +228,6 @@ func main() {
 			initConfig()
 			return
 		}
-	} else {
-		printUsage()
-		return
 	}
 	config, err := getConfig()
 	if err != nil {
@@ -273,18 +270,15 @@ func main() {
 
 func handleAction(s service.Service, action string) {
 	if len(action) != 0 {
-		if action == "run" {
-			err := s.Run()
-			if err != nil {
-				log.Fatal(err)
-			}
-		} else {
-			err := service.Control(s, action)
-			if err != nil {
-				log.Printf("Valid actions: %q\n", service.ControlAction)
-				log.Fatal(err)
-			}
-			return
+		err := service.Control(s, action)
+		if err != nil {
+			log.Printf("Valid actions: %q\n", service.ControlAction)
+			log.Fatal(err)
+		}
+	} else {
+		err := s.Run()
+		if err != nil {
+			log.Fatal(err)
 		}
 	}
 }
